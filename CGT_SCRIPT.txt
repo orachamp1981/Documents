@@ -790,3 +790,119 @@ FROM fifo_calc
 WHERE matched_units > 0
 AND remaining_units >= 0
 ORDER BY invest_date, redeem_date;
+
+--------------------------------ELEVENTH------------------------------------------
+
+WITH trx AS
+(
+    SELECT
+        t.participant_id_fk,
+        d.trns_dtl_id_pk,
+        d.trns_type,
+        d.nav_date,
+        d.quantity,
+        d.rate,
+        d.gross_amount,
+
+        SUM(CASE WHEN d.trns_type='I' THEN d.quantity ELSE 0 END)
+            OVER(ORDER BY d.nav_date,d.trns_dtl_id_pk) cum_invest,
+
+        SUM(CASE WHEN d.trns_type='R' THEN d.quantity ELSE 0 END)
+            OVER(ORDER BY d.nav_date,d.trns_dtl_id_pk) cum_redeem
+
+    FROM units_transaction t
+    JOIN units_transaction_dtl d
+        ON t.transaction_id_pk = d.transaction_id_fk
+
+    WHERE t.participant_id_fk = :P_PARTICIPANT
+    AND d.trns_type IN ('I','R')
+),
+
+invest AS
+(
+    SELECT
+        trns_dtl_id_pk invest_id,
+        nav_date invest_date,
+        quantity invest_qty,
+        rate invest_nav,
+        cum_invest - quantity inv_start,
+        cum_invest inv_end
+    FROM trx
+    WHERE trns_type='I'
+),
+
+redeem AS
+(
+    SELECT
+        trns_dtl_id_pk redeem_id,
+        nav_date redeem_date,
+        quantity redeem_qty,
+        rate redeem_nav,
+        cum_redeem - quantity red_start,
+        cum_redeem red_end
+    FROM trx
+    WHERE trns_type='R'
+),
+
+fifo_calc AS
+(
+SELECT
+    i.invest_id,
+    r.redeem_id,
+
+    i.invest_date,
+    r.redeem_date,
+
+    i.invest_nav,
+    r.redeem_nav,
+
+    /* FIFO matched quantity */
+    GREATEST(
+        0,
+        LEAST(i.inv_end , r.red_end) -
+        GREATEST(i.inv_start , r.red_start)
+    ) matched_units,
+
+    /* NAV Difference */
+    r.redeem_nav - i.invest_nav nav_difference,
+
+    /* Qty Difference */
+    (r.redeem_nav - i.invest_nav) *
+    GREATEST(
+        0,
+        LEAST(i.inv_end , r.red_end) -
+        GREATEST(i.inv_start , r.red_start)
+    ) qty_difference,
+
+    /* CGT Amount */
+    (r.redeem_nav - i.invest_nav) *
+    GREATEST(
+        0,
+        LEAST(i.inv_end , r.red_end) -
+        GREATEST(i.inv_start , r.red_start)
+    ) cgt_amount,
+
+    /* Remaining units */
+    i.inv_end -
+    GREATEST(
+        0,
+        LEAST(i.inv_end , r.red_end) -
+        GREATEST(i.inv_start , r.red_start)
+    ) remaining_units
+
+FROM invest i
+JOIN redeem r
+    ON r.red_end > i.inv_start
+   AND r.red_start < i.inv_end
+)
+
+SELECT
+    f.*,
+
+    /* Total CGT per Redemption */
+    SUM(cgt_amount) OVER (PARTITION BY redeem_id) total_cgt_per_redeem
+
+FROM fifo_calc f
+WHERE matched_units > 0
+AND remaining_units >= 0
+ORDER BY invest_date, redeem_date;
