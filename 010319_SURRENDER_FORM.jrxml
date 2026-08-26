@@ -1,0 +1,746 @@
+<!-- Created with Jaspersoft Studio version 7.0.6.final using JasperReports Library version 7.0.6-5d2a603fdc6b3db8f842a83383e594f41891534d  -->
+<jasperReport name="Surrender_URDU_FORM" language="java" columnCount="1" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="10" bottomMargin="15" uuid="7d11fbe6-be91-4310-933f-afef4b31e6f1">
+	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="PQTIL.jrdax"/>
+	<parameter name="DOCUMENT_ID" class="java.lang.Integer"/>
+	<query language="SQL"><![CDATA[--Surrender Form
+select document_id_pk,membership_no,
+       'Alteration Request Form to the Membership no. '||membership_no membershipno,
+       type_of_plan Product_Rider,
+       alteration_no,
+       membership_alteration,
+       --alteration_id_pk,
+       effective_date,
+       tot_partial_wd,
+       cash_value,
+       new_freq_payment,
+       new_contribution,       
+       pq_acc_no,
+       bank_acc_no,
+       bank_name,
+       participant_name,
+       initcap(residential_address||' '||city_name||','||province_name||' '||country_name) residential_address,
+       cnic_no,
+       dob,
+       gender,
+       mobile_no,
+       residential_contact,
+       type_of_plan,
+       commencement_date,
+       membership_term,
+       maturity_date,
+       'I, '||participant_name||', as the Participant of the Membership mentioned above, hereby declare that I wish to withdraw this Membership and pay me the cash value. I, agree and acknowledge that on receipt of approximately cash value of Rs. '||cash_value||' or with final amount on next pricing date, in full and final settlement of the above membership, I will have no Takaful cover as the plan will terminate after this withdrawal.' hd1,
+'I, also acknowledge that cash value stated above are based on last available NAV. The actual values can be higher or lower than depending on the performance of the underlying investments of the Company.' hd2,
+'Being authorized, I hereby give Pak Qatar Family Takaful Limited full and complete discharge of its liabilities and relieve Pak Qatar Family Takaful Limited, of any future claims related to the permanent withdrawal of the plan which could be made against it by virtue of this membership.' hd3,
+'Withdrawal Proceeds are subject to Zakat' hd4,
+'I, '||participant_name||', as Participant in the '||type_of_plan||', authorize the Wakeel to arrange for the collection and payment of Zakat on my behalf.' hd5,
+'I, '||participant_name||', as Participant in the '||type_of_plan||', hereby declare not to deduct Zakat and payment of Zakat will be my responsibility. I am providing the CZ-50 in this regard.' hd6,
+'Are you or any of your associate (immediate family member) affiliated with any Political Party, or works for the Judiciary, Armed Forces, Law Enforcement Agency or Bureaucracy in any possible way?If the reply to the aforementioned has been given in affirmation then complete a separate 
+
+Answer:' hd7,
+'Do you have any criminal record or have any criminal proceedings pending against you before any adjudicating forum(s) or are you a part of any banned outfit as per the prevailing laws of the Land?
+
+Answer:' hd8,
+'Are you in any way engaged in any sort of business activities with the countries being marked as AML non-compliant by the FATF or UN? If yes, then please share the details.
+
+Answer:' hd9,
+USER_NAME
+
+  from (select a.document_id_pk,a.document_code membership_no,
+               /*(select count(v1.alteration_code)
+                  from vu_alteraiion v1
+                 where v1.document_code = a.document_code
+                   and v1.alteration_id_pk < c.alteration_id_pk)*/0 alteration_no,
+                   --c.alteration_id_pk,
+               'Withdrawal Request' membership_alteration,
+               trunc(sysdate) effective_date,
+               (select to_char(nvl(sum(abs(v2.transaction_amount)), 0),'FM999G999G999G990D00')
+          from epf_acc_transaction v1, epf_acc_transaction_dtl v2
+         where v1.transaction_id_pk = v2.transaction_id_fk
+           and v1.transaction_flag = 'W'
+           and v1.document_id_fk = a.document_id_pk
+           and v2.employee_id_fk = b.employee_id_pk) tot_partial_wd,
+           to_char(pkg_epf_calculation.sf_get_cash_value(a.document_id_pk,b.employee_id_pk,a.period_to),'FM999G999G999G990D00') cash_value,
+               (select a1.setup_description
+                  from vu_setup_category_detail a1
+                 where 1 = 1
+                   and a1.setup_category_id_pk = 10
+                   and a1.setup_dtl_id_pk = b.mode_of_payment_id) new_freq_payment,
+                   (select min(y3.DUE_DATE)
+          from vu_payment_scheduler y3
+         where y3.document_id_fk = a.document_id_pk
+           and y3.employee_id_pk = b.employee_id_pk
+           and upper(y3.PAYMENT_STATUS) = 'DUE')  next_cont_due_dt,
+           (select max(y2.PAID_DATE)
+          from vu_payment_scheduler y2
+         where y2.document_id_fk = a.document_id_pk
+           and y2.employee_id_pk = b.employee_id_pk) last_cont_paid_dt,
+                   b.contribution new_contribution,
+                   '310700039300001' pq_acc_no,
+               b.account_no bank_acc_no,
+               a.policy_bank_id,
+               (select initcap(b1.bank_name)
+               from epf_gen_st_bank b1
+               where b1.bank_id_pk = a.policy_bank_id) bank_name,
+               initcap(b.emp_title||' '||trim(b.employee_name)) participant_name,
+                b.emp_address residential_address,b.city_id_fk,(select c1.city_name from epf_gen_st_city c1 where c1.city_id_pk = b.city_id_fk) city_name,
+               c1.province_id_fk,(select pr.province_name from epf_gen_st_province pr where pr.province_id_pk = c1.province_id_fk) province_name,
+               p1.country_code, (select c1.setup_description
+                  from vu_setup_category_detail c1
+                 where 1 = 1
+                   and c1.setup_category_id_pk = 25
+                   and c1.setup_dtl_id_pk = p1.country_code) country_name,
+               b.cnic_no,
+               b.dob,
+               decode(b.gender,'M','Male','F','Female') gender,
+               b.mobile_no,
+               b.phone_no residential_contact,
+               d.prod_type_name type_of_plan,
+               a.period_from commencement_date,
+               a.contribution_term membership_term,
+               a.period_to maturity_date,
+               (SELECT USER_ID
+                 FROM SM_USERS SM WHERE USER_ID_PK =1) USER_NAME
+               --,c.alteration_type_id_fk
+          from epf_uw_document         a,
+               epf_uw_employees        b,
+               --vu_alteraiion           c,
+               epf_gen_st_product_type d,
+               epf_gen_st_participant p1,
+               epf_gen_st_city c1
+         where 1 = 1
+           and a.document_id_pk = b.document_id_fk
+           --and a.document_code = c.document_code
+           and a.product_type_id_fk = d.prod_type_id_pk
+           and a.participant_id_fk = p1.participant_id_pk
+           and c1.city_id_pk = p1.city_id_fk(+)
+           --and b.emp_status_id_fk in (39,821,931) --Inforce,Paid up
+           --and c.ALTERATION_ID_PK in (select max(alteration_id_pk) from vu_alteraiion v1 where v1.DOCUMENT_CODE = a.document_code)
+           and a.document_id_pk = $P{DOCUMENT_ID}
+           )
+           
+]]></query>
+	<field name="DOCUMENT_ID_PK" class="java.math.BigDecimal">
+		<property name="com.jaspersoft.studio.field.name" value="DOCUMENT_ID_PK"/>
+		<property name="com.jaspersoft.studio.field.label" value="DOCUMENT_ID_PK"/>
+	</field>
+	<field name="MEMBERSHIP_NO" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="MEMBERSHIP_NO"/>
+		<property name="com.jaspersoft.studio.field.label" value="MEMBERSHIP_NO"/>
+	</field>
+	<field name="MEMBERSHIPNO" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="MEMBERSHIPNO"/>
+		<property name="com.jaspersoft.studio.field.label" value="MEMBERSHIPNO"/>
+	</field>
+	<field name="PRODUCT_RIDER" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="PRODUCT_RIDER"/>
+		<property name="com.jaspersoft.studio.field.label" value="PRODUCT_RIDER"/>
+	</field>
+	<field name="ALTERATION_NO" class="java.math.BigDecimal">
+		<property name="com.jaspersoft.studio.field.name" value="ALTERATION_NO"/>
+		<property name="com.jaspersoft.studio.field.label" value="ALTERATION_NO"/>
+	</field>
+	<field name="MEMBERSHIP_ALTERATION" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="MEMBERSHIP_ALTERATION"/>
+		<property name="com.jaspersoft.studio.field.label" value="MEMBERSHIP_ALTERATION"/>
+	</field>
+	<field name="EFFECTIVE_DATE" class="java.sql.Timestamp">
+		<property name="com.jaspersoft.studio.field.name" value="EFFECTIVE_DATE"/>
+		<property name="com.jaspersoft.studio.field.label" value="EFFECTIVE_DATE"/>
+	</field>
+	<field name="TOT_PARTIAL_WD" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="TOT_PARTIAL_WD"/>
+		<property name="com.jaspersoft.studio.field.label" value="TOT_PARTIAL_WD"/>
+	</field>
+	<field name="CASH_VALUE" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="CASH_VALUE"/>
+		<property name="com.jaspersoft.studio.field.label" value="CASH_VALUE"/>
+	</field>
+	<field name="NEW_FREQ_PAYMENT" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="NEW_FREQ_PAYMENT"/>
+		<property name="com.jaspersoft.studio.field.label" value="NEW_FREQ_PAYMENT"/>
+	</field>
+	<field name="NEW_CONTRIBUTION" class="java.math.BigDecimal">
+		<property name="com.jaspersoft.studio.field.name" value="NEW_CONTRIBUTION"/>
+		<property name="com.jaspersoft.studio.field.label" value="NEW_CONTRIBUTION"/>
+	</field>
+	<field name="PQ_ACC_NO" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="PQ_ACC_NO"/>
+		<property name="com.jaspersoft.studio.field.label" value="PQ_ACC_NO"/>
+	</field>
+	<field name="BANK_ACC_NO" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="BANK_ACC_NO"/>
+		<property name="com.jaspersoft.studio.field.label" value="BANK_ACC_NO"/>
+	</field>
+	<field name="BANK_NAME" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="BANK_NAME"/>
+		<property name="com.jaspersoft.studio.field.label" value="BANK_NAME"/>
+	</field>
+	<field name="PARTICIPANT_NAME" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="PARTICIPANT_NAME"/>
+		<property name="com.jaspersoft.studio.field.label" value="PARTICIPANT_NAME"/>
+	</field>
+	<field name="RESIDENTIAL_ADDRESS" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="RESIDENTIAL_ADDRESS"/>
+		<property name="com.jaspersoft.studio.field.label" value="RESIDENTIAL_ADDRESS"/>
+	</field>
+	<field name="CNIC_NO" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="CNIC_NO"/>
+		<property name="com.jaspersoft.studio.field.label" value="CNIC_NO"/>
+	</field>
+	<field name="DOB" class="java.sql.Timestamp">
+		<property name="com.jaspersoft.studio.field.name" value="DOB"/>
+		<property name="com.jaspersoft.studio.field.label" value="DOB"/>
+	</field>
+	<field name="GENDER" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="GENDER"/>
+		<property name="com.jaspersoft.studio.field.label" value="GENDER"/>
+	</field>
+	<field name="MOBILE_NO" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="MOBILE_NO"/>
+		<property name="com.jaspersoft.studio.field.label" value="MOBILE_NO"/>
+	</field>
+	<field name="RESIDENTIAL_CONTACT" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="RESIDENTIAL_CONTACT"/>
+		<property name="com.jaspersoft.studio.field.label" value="RESIDENTIAL_CONTACT"/>
+	</field>
+	<field name="TYPE_OF_PLAN" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="TYPE_OF_PLAN"/>
+		<property name="com.jaspersoft.studio.field.label" value="TYPE_OF_PLAN"/>
+	</field>
+	<field name="COMMENCEMENT_DATE" class="java.sql.Timestamp">
+		<property name="com.jaspersoft.studio.field.name" value="COMMENCEMENT_DATE"/>
+		<property name="com.jaspersoft.studio.field.label" value="COMMENCEMENT_DATE"/>
+	</field>
+	<field name="MEMBERSHIP_TERM" class="java.math.BigDecimal">
+		<property name="com.jaspersoft.studio.field.name" value="MEMBERSHIP_TERM"/>
+		<property name="com.jaspersoft.studio.field.label" value="MEMBERSHIP_TERM"/>
+	</field>
+	<field name="MATURITY_DATE" class="java.sql.Timestamp">
+		<property name="com.jaspersoft.studio.field.name" value="MATURITY_DATE"/>
+		<property name="com.jaspersoft.studio.field.label" value="MATURITY_DATE"/>
+	</field>
+	<field name="HD1" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="HD1"/>
+		<property name="com.jaspersoft.studio.field.label" value="HD1"/>
+	</field>
+	<field name="HD2" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="HD2"/>
+		<property name="com.jaspersoft.studio.field.label" value="HD2"/>
+	</field>
+	<field name="HD3" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="HD3"/>
+		<property name="com.jaspersoft.studio.field.label" value="HD3"/>
+	</field>
+	<field name="HD4" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="HD4"/>
+		<property name="com.jaspersoft.studio.field.label" value="HD4"/>
+	</field>
+	<field name="HD5" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="HD5"/>
+		<property name="com.jaspersoft.studio.field.label" value="HD5"/>
+	</field>
+	<field name="HD6" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="HD6"/>
+		<property name="com.jaspersoft.studio.field.label" value="HD6"/>
+	</field>
+	<field name="HD7" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="HD7"/>
+		<property name="com.jaspersoft.studio.field.label" value="HD7"/>
+	</field>
+	<field name="HD8" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="HD8"/>
+		<property name="com.jaspersoft.studio.field.label" value="HD8"/>
+	</field>
+	<field name="HD9" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="HD9"/>
+		<property name="com.jaspersoft.studio.field.label" value="HD9"/>
+	</field>
+	<field name="USER_NAME" class="java.lang.String">
+		<property name="com.jaspersoft.studio.field.name" value="USER_NAME"/>
+		<property name="com.jaspersoft.studio.field.label" value="USER_NAME"/>
+	</field>
+	<background splitType="Stretch"/>
+	<pageHeader height="44" splitType="Stretch"/>
+	<detail>
+		<band height="100">
+			<element kind="frame" uuid="179fb8f7-5b32-4e7b-b73a-f1a4de7a739a" x="0" y="16" width="555" height="79">
+				<element kind="rectangle" uuid="9d016899-b597-4f1e-b865-4f9cf5069070" x="0" y="0" width="555" height="78" backcolor="#C2E8BA"/>
+				<element kind="staticText" uuid="5a998440-a68b-495d-b95d-32a13937d37e" x="0" y="20" width="555" height="24" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="true" hTextAlign="Center" vTextAlign="Middle">
+					<text><![CDATA[باقاعدہ تعاون کے لیے الحفظ اسلامی آسان سیونگز پلان (2024) وی 10]]></text>
+				</element>
+				<element kind="textField" uuid="2719a8be-49fe-4452-81af-3873e734263e" x="0" y="37" width="555" height="19" fontSize="12.0" bold="true" hTextAlign="Center">
+					<expression><![CDATA["Alteration Request Form to the Membership no. " + $F{MEMBERSHIP_NO}]]></expression>
+				</element>
+				<element kind="textField" uuid="5dcb974c-527c-44bd-8ed7-19cc0b46d621" x="0" y="55" width="555" height="24" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="true" hTextAlign="Center">
+					<expression><![CDATA["رکنیت میں تبدیلی کی درخواست ممبرشپ نمبر " + $F{MEMBERSHIP_NO}]]></expression>
+				</element>
+				<element kind="textField" uuid="245c0a59-f613-4749-9f12-2c593b0f08e5" x="0" y="2" width="555" height="18" fontSize="12.0" bold="true" hTextAlign="Center" vTextAlign="Middle">
+					<expression><![CDATA[$F{PRODUCT_RIDER}]]></expression>
+				</element>
+			</element>
+			<property name="com.jaspersoft.studio.unit.height" value="px"/>
+		</band>
+		<band height="618" splitType="Stretch">
+			<element kind="frame" uuid="c65f734a-d68e-4c1e-a8f6-bd0f3246dbaa" x="0" y="5" width="555" height="60">
+				<element kind="rectangle" uuid="df0c54c1-518d-4855-bbce-6d14a2d51f96" x="0" y="0" width="555" height="60" backcolor="#BFE4B7"/>
+				<element kind="staticText" uuid="af80d50f-687c-4e51-86fb-ad1382c02823" x="4" y="3" width="100" height="22" bold="true" hTextAlign="Left" vTextAlign="Middle">
+					<text><![CDATA[Alteration Details]]></text>
+				</element>
+				<element kind="staticText" uuid="722634c3-e3d7-40f9-bffc-4ab39f20d783" x="444" y="0" width="100" height="30" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="true" hTextAlign="Right" vTextAlign="Middle">
+					<paragraph rightIndent="1"/>
+					<text><![CDATA[تبدیلی کی تفصیلات]]></text>
+					<property name="com.jaspersoft.studio.unit.rightIndent" value="px"/>
+				</element>
+				<element kind="staticText" uuid="72f4da41-4c44-4946-946c-72c2e8a6d04c" x="4" y="33" width="100" height="22" bold="false" hTextAlign="Left" vTextAlign="Middle">
+					<text><![CDATA[Membership Alteration]]></text>
+				</element>
+				<element kind="staticText" uuid="98742042-d24f-480e-b454-f2efaf524ebb" x="444" y="30" width="100" height="30" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="false" hTextAlign="Right" vTextAlign="Middle">
+					<paragraph rightIndent="1"/>
+					<text><![CDATA[رکنیت]]></text>
+					<property name="com.jaspersoft.studio.unit.rightIndent" value="px"/>
+				</element>
+				<element kind="rectangle" uuid="9cb39651-b256-4584-95aa-34ebed4bf58b" x="131" y="25" width="285" height="34">
+					<property name="com.jaspersoft.studio.unit.y" value="px"/>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<pen lineWidth="0.0"/>
+				</element>
+				<element kind="textField" uuid="f74fd4ee-bce2-471e-b075-e1c7ba5e3a6c" x="200" y="28" width="160" height="28" hTextAlign="Center" vTextAlign="Middle">
+					<expression><![CDATA[$F{MEMBERSHIP_ALTERATION}]]></expression>
+				</element>
+			</element>
+			<element kind="frame" uuid="18606734-65e4-41a7-9e03-44c32b6ada3c" x="0" y="78" width="554" height="152">
+				<element kind="rectangle" uuid="5248b6e1-2be8-4cf2-858f-dd5f87bfbd14" x="1" y="0" width="553" height="151" backcolor="#BFE4B7"/>
+				<element kind="rectangle" uuid="7c8553fb-9668-49b4-9a98-f544ad592d28" x="131" y="1" width="285" height="150">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<pen lineWidth="0.0"/>
+				</element>
+				<element kind="staticText" uuid="6082cdaf-4d28-46a8-8e0b-cea18551c4ad" x="4" y="0" width="100" height="22" bold="true" hTextAlign="Left" vTextAlign="Middle">
+					<text><![CDATA[Participant]]></text>
+				</element>
+				<element kind="staticText" uuid="adc5c103-7ffb-43a9-a71e-c2d3676f1eb7" x="444" y="-3" width="100" height="30" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="true" hTextAlign="Right" vTextAlign="Middle">
+					<paragraph rightIndent="1"/>
+					<text><![CDATA[شریک تکافل ]]></text>
+				</element>
+				<element kind="staticText" uuid="03e7e0d3-f427-4c46-8c47-7d42e16632be" x="4" y="30" width="100" height="22" bold="false" hTextAlign="Left" vTextAlign="Middle">
+					<text><![CDATA[Name]]></text>
+				</element>
+				<element kind="textField" uuid="c3d5c501-ae46-4648-952d-75a51db776a1" x="200" y="28" width="160" height="28" hTextAlign="Center" vTextAlign="Middle">
+					<expression><![CDATA[$F{PARTICIPANT_NAME}]]></expression>
+				</element>
+				<element kind="staticText" uuid="520af673-cb6d-4349-9b73-d5b44a2fc9fc" x="444" y="27" width="100" height="30" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="false" hTextAlign="Right" vTextAlign="Middle">
+					<paragraph rightIndent="1"/>
+					<text><![CDATA[نام ]]></text>
+				</element>
+				<element kind="staticText" uuid="62dc2946-6b2b-4846-8042-fe449a2718ae" x="4" y="60" width="100" height="22" bold="false" hTextAlign="Left" vTextAlign="Middle">
+					<text><![CDATA[Date of Birth]]></text>
+				</element>
+				<element kind="textField" uuid="ce35b8de-deb6-46ad-aeea-999e5d0812be" x="200" y="58" width="160" height="28" pattern="M/d/yyyy" hTextAlign="Center" vTextAlign="Middle">
+					<expression><![CDATA[$F{DOB}]]></expression>
+				</element>
+				<element kind="staticText" uuid="6a30a09f-d674-441b-8834-0c1824e3924b" x="444" y="57" width="100" height="30" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="false" hTextAlign="Right" vTextAlign="Middle">
+					<paragraph rightIndent="1"/>
+					<text><![CDATA[تاریخ    پیدائش ]]></text>
+				</element>
+				<element kind="staticText" uuid="88654318-0185-418b-b330-4c646927eb85" x="4" y="90" width="100" height="22" bold="false" hTextAlign="Left" vTextAlign="Middle">
+					<text><![CDATA[CNIC]]></text>
+				</element>
+				<element kind="textField" uuid="7d395f57-8fff-44a3-9aec-1166b5d47744" x="200" y="88" width="160" height="28" hTextAlign="Center" vTextAlign="Middle">
+					<expression><![CDATA[$F{CNIC_NO}]]></expression>
+				</element>
+				<element kind="staticText" uuid="5babdb7b-40cc-4849-a542-ecc8aa3f6d8d" x="444" y="87" width="100" height="30" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="false" hTextAlign="Right" vTextAlign="Middle">
+					<paragraph rightIndent="1"/>
+					<text><![CDATA[شناختی  کارڈ  نمبر ]]></text>
+				</element>
+				<element kind="staticText" uuid="6796f393-5ad2-4623-b687-6f954ed55595" x="4" y="120" width="100" height="22" bold="false" hTextAlign="Left" vTextAlign="Middle">
+					<text><![CDATA[Gender]]></text>
+				</element>
+				<element kind="textField" uuid="30c495b0-1100-4233-8112-361dd4f52ccc" x="200" y="118" width="160" height="28" hTextAlign="Center" vTextAlign="Middle">
+					<expression><![CDATA[$F{GENDER}]]></expression>
+				</element>
+				<element kind="staticText" uuid="a0c8673a-2659-4ddc-bbdd-c82cc9032b15" x="444" y="117" width="100" height="30" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="false" hTextAlign="Right" vTextAlign="Middle">
+					<paragraph rightIndent="1"/>
+					<text><![CDATA[جنس ]]></text>
+				</element>
+			</element>
+			<element kind="frame" uuid="499fbdd0-5223-4d5c-bc95-5bc1fcb878de" x="0" y="249" width="555" height="364">
+				<element kind="rectangle" uuid="16885077-5a75-4172-b874-60c8fc48e9c4" x="0" y="-3" width="555" height="30" backcolor="#BFE4B7"/>
+				<element kind="staticText" uuid="98e19b09-388d-4d7e-af2b-707f92d42f57" x="4" y="0" width="186" height="22" bold="true" hTextAlign="Left" vTextAlign="Middle">
+					<text><![CDATA[Perticipant's Declaration]]></text>
+				</element>
+				<element kind="staticText" uuid="a8b9d03b-e5d5-4f82-bbbd-beb6d76fe870" x="444" y="-3" width="100" height="30" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="true" hTextAlign="Right" vTextAlign="Middle">
+					<paragraph rightIndent="1"/>
+					<text><![CDATA[شریک  کا  اقرار نامہ ]]></text>
+					<property name="com.jaspersoft.studio.unit.rightIndent" value="px"/>
+				</element>
+				<element kind="rectangle" uuid="8e080edc-344f-466a-b05e-98f10fc2458b" x="0" y="27" width="555" height="153" backcolor="#FFFFFF"/>
+				<element kind="textField" uuid="89da4bf8-d3cd-4c48-b78f-abd8a118e455" x="290" y="28" width="263" height="152" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Justified">
+					<expression><![CDATA["میں،"  + $F{PARTICIPANT_NAME} + " اوپر ذکر کردہ رکنیت کے شریک کے طورپر میں اس کا اقرار کرتا ہوں کہ میں اس رکنیت سے دستبردار ہونا چاہتا ہوں اور یہ کہ کیش ویلیو مجھے ادا کی جائے، میں اتفاق کرتا ہوں اور یہ تسلیم کرتا ہوں کہ تقریبا" + $F{CASH_VALUE}  + " روپے کی کیش ویلیو کی وصولی پر یا اگلی قیمتوں کی تعین کی تاریخ پر مندرجہ بالا رکینیت کے کامل اور حتمی تصفیہ کے بعد پلان ختم ہوجائے گا اور میرے پاس کوئی تکافل کوریج نہیں ہوگی۔"]]></expression>
+					<box topPadding="5" leftPadding="2" bottomPadding="2" rightPadding="4"/>
+				</element>
+				<element kind="textField" uuid="d76d4643-6d6c-4c5d-b676-3663a7997723" x="0" y="28" width="270" height="152" hTextAlign="Justified">
+					<expression><![CDATA[$F{HD1}]]></expression>
+					<box topPadding="2" leftPadding="4" bottomPadding="2" rightPadding="2"/>
+				</element>
+				<element kind="rectangle" uuid="239a5609-8c4b-405e-b0ed-c9364eea4c29" x="0" y="180" width="555" height="93" backcolor="#FFFFFF"/>
+				<element kind="textField" uuid="79dcba73-523f-4ab8-aedf-85511dd9f187" x="290" y="181" width="263" height="92" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Justified">
+					<expression><![CDATA[ "میں اس کو بھی تسلیم کرتا ہوں کہ اوپر بیان کردہ کیش ویلیو کا مدار آخری میسر NAVکی بنیاد پر ہوگا، حقیقی مالیت زیادہ یا کم ہوسکتی ہے، اور اس کا مدار کمپنی کی بنیادی سرمایہ کاری کی کارکردگی پر ہے"]]></expression>
+					<box topPadding="5" leftPadding="2" bottomPadding="2" rightPadding="4"/>
+				</element>
+				<element kind="textField" uuid="9c46033b-ba1b-40ae-918e-528d37c4a519" x="0" y="181" width="270" height="91" hTextAlign="Justified">
+					<expression><![CDATA[$F{HD2}]]></expression>
+					<box padding="2"/>
+				</element>
+				<element kind="rectangle" uuid="30edddae-d5d9-47c0-aca7-837ecdf76324" x="0" y="272" width="555" height="93" backcolor="#FFFFFF"/>
+				<element kind="textField" uuid="086a82a6-22bb-4821-9c2c-4230c119aad1" x="290" y="273" width="263" height="92" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Justified">
+					<expression><![CDATA["مجاز ہونے کی حیثیت سے، میں پاک قطر فیملی تکافل لمیٹڈ کوپلان کے مستقل انخلاء سے متعلق مستقبل کے کسی بھی کلیم کے دعویٰ سے بری الذمہ کرتا ہوں، جوکہ اس رکنیت کی وجہ سے اس کے خلاف کیا جاسکتا ہو"]]></expression>
+					<box topPadding="5" leftPadding="2" bottomPadding="2" rightPadding="4"/>
+				</element>
+				<element kind="textField" uuid="a40d9483-4049-4701-85a2-400e6d092530" x="0" y="273" width="270" height="91" hTextAlign="Justified">
+					<expression><![CDATA[$F{HD3}]]></expression>
+					<box padding="2"/>
+				</element>
+			</element>
+			<element kind="line" uuid="c8b1b416-e6da-4921-ba42-c8dac3786a4f" x="0" y="30" width="555" height="1">
+				<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			</element>
+			<element kind="line" uuid="6e9adeb8-6d90-41b9-9ee1-23ca2bedcd56" x="1" y="103" width="553" height="1">
+				<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			</element>
+			<element kind="line" uuid="ea36eb5b-6304-42e3-94c1-bcc022ef98fd" x="1" y="136" width="553" height="1">
+				<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			</element>
+			<element kind="line" uuid="e73e7054-bc1a-4ca6-8238-0e4a37f6a32b" x="1" y="166" width="553" height="1">
+				<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			</element>
+			<element kind="line" uuid="015365f6-68d2-4540-ba7d-84c300aa6b6d" x="1" y="197" width="553" height="1">
+				<property name="com.jaspersoft.studio.unit.height" value="px"/>
+			</element>
+			<property name="com.jaspersoft.studio.unit.height" value="px"/>
+		</band>
+		<band height="731">
+			<element kind="frame" uuid="9e576acb-5657-4d7b-ab1e-7aca4f8c3c26" x="0" y="10" width="555" height="255">
+				<element kind="rectangle" uuid="cad39bc9-1cd2-4e92-aff0-d44e861532a4" x="0" y="163" width="555" height="92" backcolor="#BFE4B7"/>
+				<element kind="rectangle" uuid="957f0db8-392e-4cdf-9b2c-fe2545c2767f" x="0" y="-3" width="555" height="30" backcolor="#BFE4B7"/>
+				<element kind="staticText" uuid="43caacba-92a6-4f50-b681-a7b92a157994" x="4" y="0" width="186" height="22" bold="true" hTextAlign="Left" vTextAlign="Middle">
+					<text><![CDATA[Zakat]]></text>
+				</element>
+				<element kind="staticText" uuid="05d5b234-f839-444f-88f8-2dbbf25c2721" x="400" y="-3" width="144" height="30" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="true" hTextAlign="Right" vTextAlign="Middle">
+					<paragraph rightIndent="1"/>
+					<text><![CDATA[زکواہ کٹوتی/ استثنئ کا اجازت نامہ]]></text>
+					<property name="com.jaspersoft.studio.unit.rightIndent" value="px"/>
+				</element>
+				<element kind="rectangle" uuid="9b3cb8d6-6e48-4421-bd50-4379cd60481b" x="0" y="70" width="555" height="93" backcolor="#BFE4B7"/>
+				<element kind="rectangle" uuid="ad22a5b4-29e9-4bc5-bfb5-abd59c53a595" x="0" y="27" width="555" height="43" backcolor="#FFFFFF"/>
+				<element kind="textField" uuid="60c6a3eb-06ac-4229-a502-825865c83603" mode="Opaque" x="1" y="71" width="209" height="91" backcolor="#BFE4B7" hTextAlign="Justified">
+					<expression><![CDATA[$F{HD5}]]></expression>
+					<box padding="2"/>
+				</element>
+				<element kind="staticText" uuid="2085157e-571b-488a-bdf2-009130d6016b" x="339" y="28" width="214" height="42" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Justified">
+					<text><![CDATA[میں موجود بینک اکاؤنٹ میں ادا کرے- جزوی طور پر رقم نکالنے کی آمدن زکوۃ کے ساتھ مشروط ہوگی اور میں اسی وجہ سے یہ اقرار کرتا ہوں کہ]]></text>
+					<box topPadding="5" leftPadding="2" bottomPadding="2" rightPadding="4"/>
+				</element>
+				<element kind="rectangle" uuid="3c234485-693f-46b3-a8ec-9bd13e40ee68" mode="Opaque" x="220" y="71" width="120" height="91" backcolor="#FFFFFF">
+					<pen lineWidth="0.0"/>
+				</element>
+				<element kind="rectangle" uuid="701d5ae9-e082-4a5d-ba3f-5b72f5afe096" x="257" y="100" width="47" height="28"/>
+				<element kind="staticText" uuid="6f45b872-9b69-434c-9075-8d27eada8fd3" x="339" y="164" width="215" height="91" fontName="URDU JAMEEL NASTALAIQ" fontSize="10.0" hTextAlign="Justified">
+					<text><![CDATA[زکوۃ کی کٹوتی اور اس کی ادائیگی میری ذمہ داری
+نہیں ہوگی، میں اس حوالے سے -50CZ فراہم کر رہا
+ہوں۔]]></text>
+					<box topPadding="5" leftPadding="2" bottomPadding="2" rightPadding="4"/>
+				</element>
+				<element kind="textField" uuid="d4757bda-2b1d-49c8-bf20-4f0b3d1dddf0" x="1" y="28" width="280" height="42" hTextAlign="Justified">
+					<expression><![CDATA[$F{HD4}]]></expression>
+					<box padding="2"/>
+				</element>
+				<element kind="textField" uuid="617fb845-57c3-4527-9124-22c8d5d6800c" mode="Opaque" x="1" y="164" width="210" height="91" backcolor="#BFE4B7" fontSize="10.0" hTextAlign="Justified">
+					<expression><![CDATA[$F{HD6}]]></expression>
+					<box padding="2"/>
+				</element>
+				<element kind="staticText" uuid="66cbbf32-44bf-48f9-a3c6-de46a8495ad1" x="340" y="71" width="215" height="91" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Justified">
+					<text><![CDATA[میری طرف سے زکوۃ کی وصولی اور ادائیگی کا انتظام کیا جائے۔]]></text>
+					<box topPadding="5" leftPadding="2" bottomPadding="2" rightPadding="4"/>
+				</element>
+				<element kind="rectangle" uuid="b4a80f3a-4e79-4867-aa8e-cbaf0339fbda" mode="Opaque" x="220" y="164" width="120" height="91" backcolor="#FFFFFF">
+					<pen lineWidth="0.0"/>
+				</element>
+				<element kind="rectangle" uuid="f40dfd7d-c696-4370-b493-e23c721cfaae" x="257" y="193" width="47" height="28"/>
+			</element>
+			<element kind="frame" uuid="653f4d70-1e8a-4014-878e-2cc921ffd1e0" x="0" y="280" width="555" height="411">
+				<element kind="rectangle" uuid="2cf94518-bd01-493f-baeb-4cd2bbe652ef" x="0" y="310" width="555" height="128" backcolor="#BFE4B7"/>
+				<element kind="rectangle" uuid="c351e6ed-abf8-434f-b944-b694741dbc68" x="0" y="-3" width="555" height="30" backcolor="#BFE4B7"/>
+				<element kind="staticText" uuid="e869a671-393a-4658-81c4-8f5f79f53931" x="4" y="0" width="186" height="22" bold="true" hTextAlign="Left" vTextAlign="Middle">
+					<text><![CDATA[AML / CFT Questionnaire]]></text>
+				</element>
+				<element kind="staticText" uuid="de8e3936-927e-4806-a41a-a38f5a92f1d7" x="405" y="-3" width="144" height="30" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="true" hTextAlign="Right" vTextAlign="Middle">
+					<paragraph rightIndent="1"/>
+					<text><![CDATA[AML / CFT سوالنامہ]]></text>
+					<property name="com.jaspersoft.studio.unit.rightIndent" value="px"/>
+				</element>
+				<element kind="rectangle" uuid="d25847b4-43bd-4457-9064-d82611b68340" x="0" y="27" width="555" height="156" backcolor="#BFE4B7"/>
+				<element kind="textField" uuid="36d86dee-7082-43cd-9ad4-7cb33f16111f" mode="Opaque" x="1" y="28" width="218" height="152" backcolor="#BFE4B7" hTextAlign="Justified">
+					<expression><![CDATA[$F{HD7}]]></expression>
+					<box padding="2"/>
+				</element>
+				<element kind="rectangle" uuid="211c28db-0882-48e5-bc52-2c9edd075cd6" mode="Opaque" x="230" y="28" width="90" height="154" backcolor="#FFFFFF">
+					<pen lineWidth="0.0"/>
+				</element>
+				<element kind="staticText" uuid="54ec3370-2ae9-4acd-b52f-ea66037cd0e7" x="324" y="28" width="227" height="152" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Justified">
+					<text><![CDATA[کیا آپ یا آپ کے متعلقین میں سے کوئی فرد کسی سیاسی پارٹی میں شامل ہے یا کسی بھی طرح عدلیہ، مسلح افواج، قانون نافذ کرنے والے ادارے یا بیوروکریسی کے لیے کام کرتے ہیں؟ اگر مذکورہ بالا سوال کا جواب ہاں میں ہے تو ازراہِ کرم الگ سے سوالنامہ پُر کریں۔
+]]></text>
+					<box topPadding="5" leftPadding="2" bottomPadding="2" rightPadding="1"/>
+				</element>
+				<element kind="rectangle" uuid="cdcbdbd5-d6ab-4719-8084-9ea2af425a4e" x="0" y="182" width="555" height="128" backcolor="#BFE4B7"/>
+				<element kind="textField" uuid="45eeb2aa-9aed-4787-85be-4bd39c9628e8" mode="Opaque" x="1" y="183" width="218" height="126" backcolor="#BFE4B7" hTextAlign="Justified">
+					<expression><![CDATA[$F{HD8}]]></expression>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<box padding="2"/>
+				</element>
+				<element kind="rectangle" uuid="3f34d30b-5112-4492-97ae-b087919a6027" mode="Opaque" x="230" y="183" width="90" height="127" backcolor="#FFFFFF">
+					<pen lineWidth="0.0"/>
+				</element>
+				<element kind="staticText" uuid="1af1f8e3-076a-4dee-bfe3-94b0dc74ca49" x="324" y="182" width="227" height="128" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Justified">
+					<text><![CDATA[کیا آپ کا کوئی مجرمانہ ریکارڈ ہے یا آپ کے خلاف کسی جرم کے سلسلے میں کسی ادارہ میں کوئی کاروائی زیرِ غور ہے؟ یا آپ ملکی مروجہ قانون کے مطابق کسی کالعدم تنظیم سے تعلق رکھتے ہیں؟
+]]></text>
+					<box topPadding="5" leftPadding="2" bottomPadding="2" rightPadding="4"/>
+				</element>
+				<element kind="textField" uuid="780be68a-9253-4123-97c8-2ced445bd60b" mode="Opaque" x="1" y="311" width="218" height="126" backcolor="#BFE4B7" hTextAlign="Justified">
+					<expression><![CDATA[$F{HD9}]]></expression>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<box padding="2"/>
+				</element>
+				<element kind="staticText" uuid="5ec89f1b-7962-4450-bfaa-c0fffbf788ad" x="324" y="310" width="227" height="84" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Justified">
+					<text><![CDATA[کیا آپ کا کوئی مجرمانہ ریکارڈ ہے یا آپ کے خلاف کسی جرم کے سلسلے میں کسی ادارہ میں کوئی کاروائی زیرِ غور ہے؟ یا آپ ملکی مروجہ قانون کے مطابق کسی کالعدم تنظیم سے تعلق رکھتے ہیں؟]]></text>
+					<box topPadding="5" leftPadding="2" bottomPadding="2" rightPadding="4"/>
+				</element>
+				<element kind="rectangle" uuid="7848bc7f-8cbc-44d9-9e3a-7c4834bd284c" mode="Opaque" x="230" y="310" width="90" height="128" backcolor="#FFFFFF">
+					<pen lineWidth="0.0"/>
+				</element>
+				<element kind="frame" uuid="36818a93-23bf-469d-816f-3e1034c5a5a0" x="231" y="84" width="89" height="45">
+					<element kind="staticText" uuid="ea3f9ab5-fb92-4280-b28e-431996ff9348" x="0" y="0" width="89" height="37" bold="true" hTextAlign="Center">
+						<text><![CDATA[Yes	No
+ہاں 	 نہیں]]></text>
+					</element>
+					<element kind="rectangle" uuid="2dcf61d0-249d-491f-9a65-33979ed82f1e" x="19" y="37" width="14" height="8"/>
+					<element kind="rectangle" uuid="30dc8aff-08f0-4fc8-98ce-fcac411f4ba4" x="59" y="37" width="14" height="8"/>
+				</element>
+				<element kind="frame" uuid="453635a5-5367-4811-9257-f32baa9584d7" x="231" y="220" width="89" height="45">
+					<element kind="staticText" uuid="54f41e5e-25eb-421a-ae1d-78a502a9b35e" x="0" y="0" width="89" height="37" bold="true" hTextAlign="Center">
+						<text><![CDATA[Yes	No
+ہاں 	 نہیں]]></text>
+					</element>
+					<element kind="rectangle" uuid="8c19bbe0-5c68-465e-b992-e48e2721259c" x="19" y="37" width="14" height="8"/>
+					<element kind="rectangle" uuid="92d6a589-bcd5-463e-b6d6-7eb4b482ff73" x="59" y="37" width="14" height="8"/>
+				</element>
+				<element kind="frame" uuid="7cff21cb-1499-4da4-a7ef-7215c165f809" x="231" y="350" width="89" height="45">
+					<element kind="staticText" uuid="753d40d7-9d77-416c-afe7-60741d5f23be" x="0" y="0" width="89" height="37" bold="true" hTextAlign="Center">
+						<text><![CDATA[Yes	No
+ہاں 	 نہیں]]></text>
+					</element>
+					<element kind="rectangle" uuid="883cc04a-6945-437c-8817-439b8e376244" x="19" y="37" width="14" height="8"/>
+					<element kind="rectangle" uuid="bf7e33a1-fae0-4318-a258-5ad3d099217a" x="59" y="37" width="14" height="8"/>
+				</element>
+				<element kind="staticText" uuid="5a92058a-b3ea-4633-b392-1878bd91eec5" x="354" y="394" width="194" height="33" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Right">
+					<text><![CDATA[
+جواب: _________________________________________]]></text>
+				</element>
+				<element kind="staticText" uuid="7a1fa82c-87a3-4dd4-9b23-b3c170975181" x="350" y="267" width="194" height="33" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Right">
+					<text><![CDATA[
+جواب: _________________________________________]]></text>
+				</element>
+				<element kind="staticText" uuid="ec59e0fe-8216-49b9-a503-7b956477c061" x="349" y="137" width="194" height="33" fontName="URDU JAMEEL NASTALAIQ" hTextAlign="Right">
+					<text><![CDATA[
+جواب: _________________________________________]]></text>
+				</element>
+				<element kind="line" uuid="1dbff9a9-8485-4e71-b22c-ec11d239be7e" x="40" y="166" width="170" height="1">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="line" uuid="9ed29ab4-88ea-4014-97f8-09cd19270acf" x="36" y="295" width="170" height="1">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="line" uuid="a0429772-6ba0-44a6-8975-cd6c42ad529e" x="40" y="424" width="170" height="1">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+			</element>
+			<property name="com.jaspersoft.studio.unit.height" value="px"/>
+		</band>
+		<band height="207">
+			<element kind="frame" uuid="ddb000b7-3b48-4e0b-9f43-d8d5a6866c8d" x="0" y="2" width="554" height="186">
+				<element kind="rectangle" uuid="e91a352e-8d94-4763-8ce4-625bda02a008" x="0" y="0" width="554" height="186" backcolor="#BFE4B7"/>
+				<element kind="rectangle" uuid="668e16cc-a934-4f22-aa6e-56e54216e5ca" x="137" y="1" width="280" height="184">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<pen lineWidth="0.0"/>
+				</element>
+				<element kind="staticText" uuid="c42dd1da-417a-4edf-a88d-39a3c0c517a3" x="10" y="26" width="121" height="18">
+					<text><![CDATA[Participant's Signature
+]]></text>
+				</element>
+				<element kind="staticText" uuid="d2121682-6ad8-4161-a2ea-492480646191" x="10" y="66" width="121" height="18" vTextAlign="Middle">
+					<text><![CDATA[Date]]></text>
+				</element>
+				<element kind="staticText" uuid="b74689d7-2b03-44c3-bdd6-ed98285f15b6" x="10" y="85" width="121" height="18" vTextAlign="Middle">
+					<text><![CDATA[Name]]></text>
+				</element>
+				<element kind="staticText" uuid="a91726d6-0a74-4bb6-b114-68c8d1418dec" x="10" y="103" width="121" height="18" vTextAlign="Middle">
+					<text><![CDATA[CNIC #]]></text>
+				</element>
+				<element kind="staticText" uuid="cde07a5a-2703-4432-ae14-37c144eae31b" x="10" y="138" width="121" height="18" vTextAlign="Middle">
+					<text><![CDATA[Address]]></text>
+				</element>
+				<element kind="staticText" uuid="9dd13895-6629-4bd7-bc73-0f5f78d6375a" x="422" y="16" width="121" height="29" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" hTextAlign="Right">
+					<text><![CDATA[شریک کے دستخط]]></text>
+				</element>
+				<element kind="line" uuid="0ce11c3c-b177-45a1-a2c7-031416c8d522" x="1" y="64" width="552" height="1">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="line" uuid="ff170090-9cde-4667-a417-868eafc8832e" x="0" y="85" width="552" height="1">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="line" uuid="0e86ad41-5a46-41c4-807e-1da6ca359eec" x="0" y="103" width="552" height="1">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="line" uuid="e76a828a-a07c-4d2e-82c6-2f735b7f4496" x="0" y="121" width="552" height="1">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="236c8a32-cd9f-4117-bd71-da57da6f6050" x="422" y="67" width="121" height="25" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" hTextAlign="Right">
+					<text><![CDATA[تاریخ ]]></text>
+				</element>
+				<element kind="staticText" uuid="adacb07d-0b8c-4a28-a9a3-2613da571b06" x="422" y="85" width="121" height="25" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" hTextAlign="Right">
+					<text><![CDATA[نام ]]></text>
+				</element>
+				<element kind="staticText" uuid="c72c3626-23b2-465c-9f0d-32a8e6d1a8be" x="422" y="106" width="121" height="25" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" hTextAlign="Right">
+					<text><![CDATA[شناختی کارڈ نمبر]]></text>
+				</element>
+				<element kind="staticText" uuid="96e4f466-636b-43cc-a619-1b336dd978db" x="422" y="135" width="121" height="25" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" hTextAlign="Right">
+					<text><![CDATA[پتہ]]></text>
+				</element>
+				<element kind="textField" uuid="981f1d12-5ab8-46a8-99c0-5474ce7b093c" x="211" y="85" width="132" height="18" hTextAlign="Center">
+					<expression><![CDATA[$F{PARTICIPANT_NAME}]]></expression>
+				</element>
+				<element kind="textField" uuid="996ffc2d-4fd8-4f97-956b-e9767b5b8d1c" x="227" y="105" width="100" height="18" hTextAlign="Center">
+					<expression><![CDATA[$F{CNIC_NO}]]></expression>
+				</element>
+				<element kind="textField" uuid="ba8dba51-c822-43d1-aa2a-90c6322c5871" x="201" y="139" width="153" height="18" hTextAlign="Center">
+					<expression><![CDATA[$F{RESIDENTIAL_ADDRESS}]]></expression>
+				</element>
+				<element kind="textField" uuid="f6f94949-4ac7-4b8c-83d3-449289a14657" x="213" y="64" width="128" height="20" pattern="M/d/yyyy" hTextAlign="Center" vTextAlign="Middle">
+					<expression><![CDATA[new java.util.Date()]]></expression>
+				</element>
+			</element>
+		</band>
+		<band height="100">
+			<element kind="frame" uuid="6198af37-dc31-48f8-8d34-01de1c19275e" x="0" y="0" width="554" height="60">
+				<element kind="rectangle" uuid="50965587-2441-4a4c-87dc-e6b216b2b55f" x="0" y="0" width="554" height="60" backcolor="#BFE4B7"/>
+				<element kind="rectangle" uuid="9410e945-13ba-48eb-8f5c-81de7fc4a08c" x="137" y="1" width="280" height="58">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+					<pen lineWidth="0.0"/>
+				</element>
+				<element kind="staticText" uuid="3996150d-8000-45af-bae5-583b8ab07fed" x="10" y="2" width="121" height="18" bold="true" vTextAlign="Middle">
+					<text><![CDATA[Contact Details]]></text>
+				</element>
+				<element kind="staticText" uuid="56fb2b03-7c8c-4831-92e7-ecaba9997a47" x="10" y="21" width="121" height="18" vTextAlign="Middle">
+					<text><![CDATA[Mobile No.]]></text>
+				</element>
+				<element kind="staticText" uuid="37b9db42-5737-416b-956b-106e684f45ed" x="10" y="39" width="121" height="18" vTextAlign="Middle">
+					<text><![CDATA[Residential contact No.]]></text>
+				</element>
+				<element kind="line" uuid="9ee5f54c-18db-4b8c-93a6-e4a6be150cd4" x="0" y="21" width="552" height="1">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="line" uuid="5648eb9b-b5fd-41a0-b66b-a453b75ed62f" x="0" y="39" width="552" height="1">
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="70f59944-5aa2-45d6-a86d-1ad3928635ee" x="422" y="5" width="121" height="25" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" bold="true" hTextAlign="Right">
+					<text><![CDATA[رابطہ کی تفصیلات]]></text>
+				</element>
+				<element kind="staticText" uuid="632b4438-32b4-4102-9bd3-638f876a35ab" x="422" y="25" width="121" height="25" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" hTextAlign="Right">
+					<text><![CDATA[موبائل نمبر]]></text>
+				</element>
+				<element kind="staticText" uuid="02da3830-c932-4029-b274-ef224a75c75c" x="422" y="45" width="121" height="25" fontName="URDU JAMEEL NASTALAIQ" fontSize="12.0" hTextAlign="Right">
+					<text><![CDATA[گھر کا فون نمبر ]]></text>
+				</element>
+				<element kind="textField" uuid="43adcd13-6413-461f-8624-f52d2328cdc0" x="211" y="21" width="132" height="18" hTextAlign="Center">
+					<expression><![CDATA[$F{MOBILE_NO}]]></expression>
+				</element>
+				<element kind="textField" uuid="60e67944-2068-4c35-9060-07d06b7f69d9" x="201" y="41" width="153" height="18" hTextAlign="Center">
+					<expression><![CDATA[$F{RESIDENTIAL_CONTACT}]]></expression>
+				</element>
+			</element>
+		</band>
+	</detail>
+	<pageFooter height="42">
+		<element kind="frame" uuid="e0ec3c60-a15f-4933-bf97-0d94756b4073" x="0" y="1" width="555" height="41">
+			<element kind="frame" uuid="2e0200b9-a66f-4041-8c3b-e189f84a01dc" x="0" y="3" width="280" height="38">
+				<element kind="textField" uuid="e552d716-994a-4104-980b-09a369ce2d4c" x="98" y="0" width="93" height="12" fontSize="8.0" hTextAlign="Center">
+					<expression><![CDATA[$F{MEMBERSHIP_NO}]]></expression>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="2ac6ab4d-2064-4dd3-bd3d-02f45bc96a60" x="0" y="0" width="75" height="12" fontSize="8.0">
+					<text><![CDATA[Application Number]]></text>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="f0e3969d-5a3f-4ca5-8b9e-60c13a30b475" x="0" y="12" width="75" height="12" fontSize="8.0">
+					<text><![CDATA[Prepared On]]></text>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="cbf11f22-4f92-456b-872a-df3b09487925" x="0" y="24" width="75" height="12" fontSize="8.0">
+					<text><![CDATA[Executor Name]]></text>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="2aad6844-a7b5-4322-b2f6-a9a1a4cc73c5" x="193" y="0" width="75" height="12" fontName="URDU JAMEEL NASTALAIQ" fontSize="8.0" hTextAlign="Right">
+					<text><![CDATA[درخواست نمبر]]></text>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="4b422eac-ff8f-47e8-9475-bbf22994b5a7" x="193" y="12" width="75" height="12" fontName="URDU JAMEEL NASTALAIQ" fontSize="8.0" hTextAlign="Right">
+					<text><![CDATA[تیاری کی تاریخ]]></text>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="textField" uuid="185b9e70-6fb0-49c4-8d4d-66d2c25091e5" x="75" y="24" width="144" height="12" fontSize="8.0" hTextAlign="Center">
+					<expression><![CDATA[$F{USER_NAME}]]></expression>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="e027ee12-d4a7-42d7-bc79-3d885275ae75" x="193" y="24" width="75" height="12" fontName="URDU JAMEEL NASTALAIQ" fontSize="8.0" hTextAlign="Right">
+					<text><![CDATA[ایگزیکیوٹرکا نام ]]></text>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="line" uuid="22c4a580-9eef-44f5-98a1-adfaff7457a4" x="279" y="-2" width="1" height="40">
+					<property name="com.jaspersoft.studio.unit.width" value="px"/>
+				</element>
+				<element kind="textField" uuid="ac0f4411-a3f1-45fc-8414-1a88f3777648" x="98" y="12" width="93" height="12" fontSize="8.0" pattern="M/d/yyyy" hTextAlign="Center">
+					<expression><![CDATA[new java.util.Date()]]></expression>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+			</element>
+			<element kind="frame" uuid="b0e672f6-60f9-4282-9dd5-d699c07d8232" x="290" y="3" width="265" height="38">
+				<element kind="textField" uuid="712b5a87-6a68-496d-bf9c-06c915241663" x="98" y="12" width="93" height="12" fontSize="8.0" evaluationTime="Report" hTextAlign="Center">
+					<expression><![CDATA[$V{PAGE_NUMBER}]]></expression>
+				</element>
+				<element kind="textField" uuid="eeb1fe18-6e63-4190-b174-80757fe7eebf" x="98" y="0" width="93" height="12" fontSize="8.0" hTextAlign="Center">
+					<expression><![CDATA[$V{PAGE_NUMBER}]]></expression>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="e2b1338a-15a0-4469-8f4c-bc60ce5eb61b" x="0" y="0" width="75" height="12" fontSize="8.0">
+					<text><![CDATA[Page Number]]></text>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="e2fda4e4-a4d3-4f7d-aed8-ea9584444707" x="0" y="12" width="75" height="12" fontSize="8.0">
+					<text><![CDATA[Total Pages]]></text>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="a46df1e4-2197-4206-a9c9-201de1c3d7df" x="183" y="0" width="75" height="12" fontName="URDU JAMEEL NASTALAIQ" fontSize="8.0" hTextAlign="Right">
+					<text><![CDATA[صفحہ نمبر]]></text>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+				<element kind="staticText" uuid="3616dd12-9886-480f-a0f3-61b4e338d3af" x="183" y="12" width="75" height="12" fontName="URDU JAMEEL NASTALAIQ" fontSize="8.0" hTextAlign="Right">
+					<text><![CDATA[کل صفحات]]></text>
+					<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				</element>
+			</element>
+			<element kind="line" uuid="4800ed56-e6aa-4f29-9e96-6e10ea1927ce" x="0" y="0" width="555" height="1">
+				<property name="com.jaspersoft.studio.unit.height" value="px"/>
+				<pen lineWidth="2.0" lineStyle="Double"/>
+			</element>
+		</element>
+	</pageFooter>
+</jasperReport>
